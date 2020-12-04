@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -43,8 +44,8 @@ public static class Noise
                     float perlinValue = Mathf.PerlinNoise(sampleX, sampleY) * 2f - 1f;
                     noiseHeight += perlinValue * amplitude;
 
-                    amplitude *= persistance;
-                    frequency *= lacunarity;
+                    amplitude *= persistance; //persistance is in range (0,1) so amplitude decreases
+                    frequency *= lacunarity; // frequency increases
 
                 }
 
@@ -67,6 +68,12 @@ public static class Noise
 
         return noiseMap;
     
+    }
+
+
+    //TODO : Implement Poisson Disk Sampling
+    public static void GeneratePoissonDiskSampling() {
+        throw new NotImplementedException();
     }
 
 }

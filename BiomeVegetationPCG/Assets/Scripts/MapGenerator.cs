@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class MapGenerator : MonoBehaviour
 {
-
+    
     public enum DrawMode { NoiseMap, ColorMap, Mesh };
     public DrawMode drawMode;
 
@@ -12,15 +12,25 @@ public class MapGenerator : MonoBehaviour
     public int mapHeight;
     public float noiseScale;
 
+
+    [Tooltip("More octaves leads to more frequencies added resulting in a more precisely-defined terrain.")]
     public int octaves;
+
+    [Tooltip("Affect how rapidly the amplitude decrease for each octave. Each octave modifies the terrain slighter than the previous one.")]
     [Range(0,1)]
     public float persistance;
+
+    [Tooltip("Control the increase in detail. More lacunarity results in more details at each octave (as a power math function).")]
     public float lacunarity;
+
 
     public int seed;
     public Vector2 offset;
 
     public float meshHeightMultiplier;
+
+    [Tooltip("Can be used to flatten the result only (not the noise generator). Straight curve = no changes to the terrain. Can make water flat or mountains very 'peaky'.")]
+    public AnimationCurve heightCurve;
 
 
     public bool autoUpdate;
@@ -51,10 +61,12 @@ public class MapGenerator : MonoBehaviour
 
         if (drawMode == DrawMode.NoiseMap) {
             display.DrawTexture(TextureGenerator.TextureFromHeightMap(heightMap));
-        } else if (drawMode == DrawMode.ColorMap) {
+        } 
+        else if (drawMode == DrawMode.ColorMap) {
             display.DrawTexture(TextureGenerator.TextureFromColorMap(colorMap, mapWidth, mapHeight));
-        } else if (drawMode == DrawMode.Mesh) {
-            display.DrawMesh(MeshGenerator.GenerateTerrainMesh(heightMap, meshHeightMultiplier), TextureGenerator.TextureFromColorMap(colorMap, mapWidth, mapHeight));
+        } 
+        else if (drawMode == DrawMode.Mesh) {
+            display.DrawMesh(MeshGenerator.GenerateTerrainMesh(heightMap, meshHeightMultiplier, heightCurve), TextureGenerator.TextureFromColorMap(colorMap, mapWidth, mapHeight));
         }
     }
 
