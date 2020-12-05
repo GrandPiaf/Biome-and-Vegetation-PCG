@@ -7,7 +7,7 @@ using UnityEngine;
 public class MapGenerator : MonoBehaviour
 {
     
-    public enum DrawMode { NoiseMap, ColorMap, Mesh };
+    public enum DrawMode { HeightMap, HeightColorMap, MoistureMap ,Mesh };
     public DrawMode drawMode;
 
     public Noise.NormalizeMode normalizeMode;
@@ -31,7 +31,8 @@ public class MapGenerator : MonoBehaviour
     public float lacunarity;
 
 
-    public int seed;
+    public int seedHeight;
+    public int seedMoisture;
     public Vector2 offset;
 
     public float meshHeightMultiplier;
@@ -51,11 +52,16 @@ public class MapGenerator : MonoBehaviour
         MapData mapData = GenerateMapData(Vector2.zero);
         MapDisplay display = FindObjectOfType<MapDisplay>();
 
-        if (drawMode == DrawMode.NoiseMap) {
+        if (drawMode == DrawMode.HeightMap) {
             display.DrawTexture(TextureGenerator.TextureFromHeightMap(mapData.heightMap));
-        } else if (drawMode == DrawMode.ColorMap) {
+        }
+        else if (drawMode == DrawMode.HeightColorMap) {
             display.DrawTexture(TextureGenerator.TextureFromColorMap(mapData.colorMap, mapChunkSize, mapChunkSize));
-        } else if (drawMode == DrawMode.Mesh) {
+        }
+        else if (drawMode == DrawMode.MoistureMap) {
+            display.DrawTexture(TextureGenerator.TextureFromHeightMap(mapData.moistureMap));
+        }
+        else if (drawMode == DrawMode.Mesh) {
             display.DrawMesh(MeshGenerator.GenerateTerrainMesh(mapData.heightMap, meshHeightMultiplier, meshHeightCurve, editorPreviewLOD), TextureGenerator.TextureFromColorMap(mapData.colorMap, mapChunkSize, mapChunkSize));
         }
     }
@@ -106,7 +112,7 @@ public class MapGenerator : MonoBehaviour
 
     MapData GenerateMapData(Vector2 center) {
 
-        float[,] heightMap = Noise.GenerateNoiseMap(seed, mapChunkSize, mapChunkSize, noiseScale, octaves, persistance, lacunarity, center + offset, normalizeMode);
+        float[,] heightMap = Noise.GenerateNoiseMap(seedHeight, mapChunkSize, mapChunkSize, noiseScale, octaves, persistance, lacunarity, center + offset, normalizeMode);
 
         Color[] colorMap = new Color[mapChunkSize * mapChunkSize];
 
@@ -126,7 +132,9 @@ public class MapGenerator : MonoBehaviour
             }
         }
 
-        return new MapData(heightMap, colorMap);
+        float[,] moistureMap = Noise.GenerateNoiseMap(seedMoisture, mapChunkSize, mapChunkSize, noiseScale, octaves, persistance, lacunarity, center + offset, normalizeMode);
+
+        return new MapData(heightMap, moistureMap, colorMap);
 
     }
 
@@ -162,11 +170,12 @@ public struct TerrainType {
 
 public struct MapData {
     public readonly float[,] heightMap;
-    //public float[,] moistureMap;
+    public readonly float[,] moistureMap;
     public readonly Color[] colorMap;
 
-    public MapData(float[,] heightMap, Color[] colorMap) {
+    public MapData(float[,] heightMap, float[,] moistureMap, Color[] colorMap) {
         this.heightMap = heightMap;
+        this.moistureMap = moistureMap;
         this.colorMap = colorMap;
     }
 }
