@@ -16,13 +16,13 @@ public class EndlessTerrain : MonoBehaviour{
 
     public Material mapMaterial;
 
-    public static Vector2 viewerPosition;
-    Vector2 viewerPositionOld;
+    public static UnityEngine.Vector2 viewerPosition;
+    UnityEngine.Vector2 viewerPositionOld;
     static MapGenerator mapGenerator;
     int chunkSize;
     int chunksVisibleViewDist; 
 
-    Dictionary<Vector2, TerrainChunk> terrainChunkDictionary = new Dictionary<Vector2, TerrainChunk>();
+    Dictionary<UnityEngine.Vector2, TerrainChunk> terrainChunkDictionary = new Dictionary<UnityEngine.Vector2, TerrainChunk>();
     static List<TerrainChunk> terrainChunksVisibleLastUpdate = new List<TerrainChunk>();
 
     void Start() {
@@ -34,7 +34,7 @@ public class EndlessTerrain : MonoBehaviour{
     }
 
     void Update() {
-        viewerPosition = new Vector2(viewer.position.x, viewer.position.z) / scale;
+        viewerPosition = new UnityEngine.Vector2(viewer.position.x, viewer.position.z) / scale;
         if ((viewerPositionOld - viewerPosition).sqrMagnitude > sqrViewerMoveThresholdForChunkUpdate) {
             viewerPositionOld = viewerPosition;
             UpdateVisibleChunks();
@@ -55,7 +55,7 @@ public class EndlessTerrain : MonoBehaviour{
         for (int yOffset = -chunksVisibleViewDist; yOffset <= chunksVisibleViewDist; yOffset++) {
             for (int xOffset = -chunksVisibleViewDist; xOffset <= chunksVisibleViewDist; xOffset++) {
 
-                Vector2 viewedChunkCoord = new Vector2(currentChunkCoordX + xOffset, currentChunkCoordY + yOffset);
+                UnityEngine.Vector2 viewedChunkCoord = new UnityEngine.Vector2(currentChunkCoordX + xOffset, currentChunkCoordY + yOffset);
 
                 if (terrainChunkDictionary.ContainsKey(viewedChunkCoord)) {
                     terrainChunkDictionary[viewedChunkCoord].UpdateTerrainChunk();
@@ -70,7 +70,7 @@ public class EndlessTerrain : MonoBehaviour{
 
     public class TerrainChunk {
 
-        Vector2 position;
+        UnityEngine.Vector2 position;
 
         GameObject meshObject;
 
@@ -86,13 +86,13 @@ public class EndlessTerrain : MonoBehaviour{
         bool mapDataReceived;
         int previousLODIndex = -1;
 
-        public TerrainChunk(Vector2 coord, int size, LODInfo[] detailLevels, Transform parent, Material material) {
+        public TerrainChunk(UnityEngine.Vector2 coord, int size, LODInfo[] detailLevels, Transform parent, Material material) {
 
             this.detailLevels = detailLevels;
 
             position = coord * size;
 
-            bounds = new Bounds(position, Vector2.one * size);
+            bounds = new Bounds(position, UnityEngine.Vector2.one * size);
 
             Vector3 positionV3 = new Vector3(position.x, 0, position.y);
 

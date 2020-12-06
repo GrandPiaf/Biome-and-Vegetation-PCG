@@ -7,7 +7,7 @@ using UnityEngine;
 public class MapGenerator : MonoBehaviour
 {
     
-    public enum DrawMode { HeightMap, MoistureMap, BiomeColorMap, Mesh };
+    public enum DrawMode { HeightMap, MoistureMap, BiomeColorMap, Mesh, Vegetation};
     public DrawMode drawMode;
 
     public Noise.NormalizeMode normalizeMode;
@@ -33,7 +33,8 @@ public class MapGenerator : MonoBehaviour
 
     public int seedHeight;
     public int seedMoisture;
-    public Vector2 offset;
+    public int seedVegetation;
+    public UnityEngine.Vector2 offset;
 
     public float meshHeightMultiplier;
 
@@ -49,7 +50,7 @@ public class MapGenerator : MonoBehaviour
     Queue<MapThreadInfo<MeshData>> meshDataThreadInfoQueue = new Queue<MapThreadInfo<MeshData>>();
 
     public void DrawMapInEditor() {
-        MapData mapData = GenerateMapData(Vector2.zero);
+        MapData mapData = GenerateMapData(UnityEngine.Vector2.zero);
         MapDisplay display = FindObjectOfType<MapDisplay>();
 
         if (drawMode == DrawMode.HeightMap) {
@@ -64,16 +65,19 @@ public class MapGenerator : MonoBehaviour
         else if (drawMode == DrawMode.Mesh) {
             display.DrawMesh(MeshGenerator.GenerateTerrainMesh(mapData.heightMap, meshHeightMultiplier, meshHeightCurve, editorPreviewLOD), TextureGenerator.TextureFromColorMap(mapData.biomeMap, mapChunkSize, mapChunkSize));
         }
+        else if (drawMode == DrawMode.Vegetation) {
+            display.DrawTexture(TextureGenerator.TextureFromVegetationList(mapData.poissonDiskSamples, mapData.heightMap.GetLength(0), mapData.heightMap.GetLength(1)));
+        }
     }
 
-    public void RequestMapData(Vector2 center, Action<MapData> callback) {
+    public void RequestMapData(UnityEngine.Vector2 center, Action<MapData> callback) {
         ThreadStart threeadStart = delegate {
             MapDataThread(center, callback);
         };
         new Thread(threeadStart).Start();
     }
 
-    void MapDataThread(Vector2 center, Action<MapData> callback) {
+    void MapDataThread(UnityEngine.Vector2 center, Action<MapData> callback) {
         MapData mapData = GenerateMapData(center);
         lock (mapDataThreadInfoQueue) {
             mapDataThreadInfoQueue.Enqueue(new MapThreadInfo<MapData>(callback, mapData));
@@ -110,11 +114,13 @@ public class MapGenerator : MonoBehaviour
     }
 
 
-    MapData GenerateMapData(Vector2 center) {
+    MapData GenerateMapData(UnityEngine.Vector2 center) {
 
         float[,] heightMap = Noise.GenerateNoiseMap(seedHeight, mapChunkSize, mapChunkSize, noiseScale, octaves, persistance, lacunarity, center + offset, normalizeMode);
 
         float[,] moistureMap = Noise.GenerateNoiseMap(seedMoisture, mapChunkSize, mapChunkSize, noiseScale, octaves, persistance, lacunarity, center + offset, normalizeMode);
+
+        List<Vector2> poissonDiskSamples = Noise.GeneratePoissonDiskSampling(seedVegetation, mapChunkSize, mapChunkSize);
 
         Color[] biomeMap = new Color[mapChunkSize * mapChunkSize];
 
@@ -133,15 +139,12 @@ public class MapGenerator : MonoBehaviour
                     if (currentHeight >= regions[i].height && currentMoisture >= regions[i].moisture) {
                         biomeMap[y * mapChunkSize + x] = regions[i].color;
                     }
-                    //else if(currentHeight < regions[i].height && currentMoisture < regions[i].moisture) {
-                    //    break;
-                    //}
                 }
 
             }
         }
 
-        return new MapData(heightMap, moistureMap, biomeMap);
+        return new MapData(heightMap, moistureMap, biomeMap, poissonDiskSamples);
 
     }
 
@@ -180,10 +183,12 @@ public struct MapData {
     public readonly float[,] heightMap;
     public readonly float[,] moistureMap;
     public readonly Color[] biomeMap;
+    public readonly List<Vector2> poissonDiskSamples;
 
-    public MapData(float[,] heightMap, float[,] moistureMap, Color[] biomeMap) {
+    public MapData(float[,] heightMap, float[,] moistureMap, Color[] biomeMap, List<Vector2> poissonDiskSamples) {
         this.heightMap = heightMap;
         this.moistureMap = moistureMap;
         this.biomeMap = biomeMap;
+        this.poissonDiskSamples = poissonDiskSamples;
     }
 }

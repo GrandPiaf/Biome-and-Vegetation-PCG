@@ -13,9 +13,9 @@ public static class TextureGenerator
         return texture;
     }
 
-    public static Texture2D TextureFromHeightMap(float[,] heightMap) {
-        int width = heightMap.GetLength(0);
-        int height = heightMap.GetLength(1);
+    public static Texture2D TextureFromHeightMap(float[,] noiseMap) {
+        int width = noiseMap.GetLength(0);
+        int height = noiseMap.GetLength(1);
 
         Texture2D texture = new Texture2D(width, height);
 
@@ -25,11 +25,32 @@ public static class TextureGenerator
 
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-                colorMap[y * width + x] = Color.Lerp(Color.black, Color.white, heightMap[x, y]);
+                colorMap[y * width + x] = Color.Lerp(Color.black, Color.white, noiseMap[x, y]);
             }
         }
 
         return TextureFromColorMap(colorMap, width, height);
+    }
+
+    public static Texture2D TextureFromVegetationList(List<Vector2> poissonDiskSamples, int width, int height) {
+
+        Color[] colorMap = new Color[width * height];
+
+        // Initialize to black
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                colorMap[y * width + x] = Color.black;
+            }
+        }
+
+        for (int i = 0; i < poissonDiskSamples.Count; i++) {
+            int y = (int)poissonDiskSamples[i].y;
+            int x = (int)poissonDiskSamples[i].x;
+            colorMap[y * width + x] = Color.white;
+        }
+
+        return TextureFromColorMap(colorMap, width, height);
+
     }
 
 }
