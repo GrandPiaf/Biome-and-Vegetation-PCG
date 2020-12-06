@@ -24,4 +24,9 @@ public class MapDisplay : MonoBehaviour
         meshFilter.sharedMesh = meshData.CreateMesh();
         meshRenderer.sharedMaterial.mainTexture = texture;
     }
+
+    public void ResetDisplay() {
+        textureRender.enabled = false;
+        meshRenderer.enabled = false;
+    }
 }

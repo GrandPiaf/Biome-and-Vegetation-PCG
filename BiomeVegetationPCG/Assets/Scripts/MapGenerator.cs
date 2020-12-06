@@ -7,7 +7,7 @@ using UnityEngine;
 public class MapGenerator : MonoBehaviour
 {
     
-    public enum DrawMode { HeightMap, MoistureMap, BiomeColorMap, Mesh, Vegetation};
+    public enum DrawMode { None, HeightMap, MoistureMap, BiomeColorMap, Mesh, VegetationMap };
     public DrawMode drawMode;
 
     public Noise.NormalizeMode normalizeMode;
@@ -33,8 +33,13 @@ public class MapGenerator : MonoBehaviour
 
     public int seedHeight;
     public int seedMoisture;
+
     public int seedVegetation;
-    public UnityEngine.Vector2 offset;
+    public int newPointsCount;
+    public GameObject vegetationPrefab;
+
+
+    public Vector2 offset;
 
     public float meshHeightMultiplier;
 
@@ -49,11 +54,15 @@ public class MapGenerator : MonoBehaviour
     Queue<MapThreadInfo<MapData>> mapDataThreadInfoQueue = new Queue<MapThreadInfo<MapData>>();
     Queue<MapThreadInfo<MeshData>> meshDataThreadInfoQueue = new Queue<MapThreadInfo<MeshData>>();
 
+
     public void DrawMapInEditor() {
         MapData mapData = GenerateMapData(UnityEngine.Vector2.zero);
         MapDisplay display = FindObjectOfType<MapDisplay>();
 
-        if (drawMode == DrawMode.HeightMap) {
+        if (drawMode == DrawMode.None) {
+            display.ResetDisplay();
+        }
+        else if (drawMode == DrawMode.HeightMap) {
             display.DrawTexture(TextureGenerator.TextureFromHeightMap(mapData.heightMap));
         }
         else if (drawMode == DrawMode.MoistureMap) {
@@ -65,16 +74,16 @@ public class MapGenerator : MonoBehaviour
         else if (drawMode == DrawMode.Mesh) {
             display.DrawMesh(MeshGenerator.GenerateTerrainMesh(mapData.heightMap, meshHeightMultiplier, meshHeightCurve, editorPreviewLOD), TextureGenerator.TextureFromColorMap(mapData.biomeMap, mapChunkSize, mapChunkSize));
         }
-        else if (drawMode == DrawMode.Vegetation) {
+        else if (drawMode == DrawMode.VegetationMap) {
             display.DrawTexture(TextureGenerator.TextureFromVegetationList(mapData.poissonDiskSamples, mapData.heightMap.GetLength(0), mapData.heightMap.GetLength(1)));
         }
     }
 
     public void RequestMapData(UnityEngine.Vector2 center, Action<MapData> callback) {
-        ThreadStart threeadStart = delegate {
+        ThreadStart threadStart = delegate {
             MapDataThread(center, callback);
         };
-        new Thread(threeadStart).Start();
+        new Thread(threadStart).Start();
     }
 
     void MapDataThread(UnityEngine.Vector2 center, Action<MapData> callback) {
@@ -113,17 +122,13 @@ public class MapGenerator : MonoBehaviour
         }
     }
 
-
-    MapData GenerateMapData(UnityEngine.Vector2 center) {
+    MapData GenerateMapData(Vector2 center) {
 
         float[,] heightMap = Noise.GenerateNoiseMap(seedHeight, mapChunkSize, mapChunkSize, noiseScale, octaves, persistance, lacunarity, center + offset, normalizeMode);
 
         float[,] moistureMap = Noise.GenerateNoiseMap(seedMoisture, mapChunkSize, mapChunkSize, noiseScale, octaves, persistance, lacunarity, center + offset, normalizeMode);
 
-        List<Vector2> poissonDiskSamples = Noise.GeneratePoissonDiskSampling(seedVegetation, mapChunkSize, mapChunkSize);
-
         Color[] biomeMap = new Color[mapChunkSize * mapChunkSize];
-
 
         // Getting colorMap for each 'pixel' in the texture
         // Depending on heightMap and moistureMap
@@ -144,7 +149,28 @@ public class MapGenerator : MonoBehaviour
             }
         }
 
-        return new MapData(heightMap, moistureMap, biomeMap, poissonDiskSamples);
+        /*
+         * Pour chaque region
+         *      Générer une carte de place d'arbre selon le minDistance défini dans l'éditeur
+         *      Garder QUE les arbres placés dans le biome correspondant
+         */
+
+        List<PoissonSampleData> poissonDiskSamples = new List<PoissonSampleData>();
+
+        for (int i = 0; i < regions.Length; i++) {
+            List<Vector2> poissonDiskSamplesRegion = Noise.GeneratePoissonDiskSampling(seedVegetation, mapChunkSize, mapChunkSize, newPointsCount, regions[i].minDistance);
+
+            for (int k = 0; k < poissonDiskSamplesRegion.Count; k++) {
+
+                Color biomeColor = biomeMap[(int)poissonDiskSamplesRegion[k].y * mapChunkSize + (int)poissonDiskSamplesRegion[k].x];
+
+                if (biomeColor.Equals(regions[i].color)) {
+                    poissonDiskSamples.Add(new PoissonSampleData(poissonDiskSamplesRegion[k], regions[i].vegetationPrefab));
+                }
+            }
+        }
+
+        return new MapData(heightMap, moistureMap, biomeMap, poissonDiskSamples, meshHeightCurve, meshHeightMultiplier, vegetationPrefab) ;
 
     }
 
@@ -175,7 +201,9 @@ public struct TerrainType {
     public string name;
     public float height;
     public float moisture;
+    public float minDistance;
     public Color color;
+    public GameObject vegetationPrefab;
 }
 
 
@@ -183,12 +211,28 @@ public struct MapData {
     public readonly float[,] heightMap;
     public readonly float[,] moistureMap;
     public readonly Color[] biomeMap;
-    public readonly List<Vector2> poissonDiskSamples;
+    public readonly List<PoissonSampleData> poissonDiskSamples;
+    public readonly AnimationCurve heightCurve;
+    public readonly float heightMultiplier;
+    public readonly GameObject vegetationPrefab;
 
-    public MapData(float[,] heightMap, float[,] moistureMap, Color[] biomeMap, List<Vector2> poissonDiskSamples) {
+    public MapData(float[,] heightMap, float[,] moistureMap, Color[] biomeMap, List<PoissonSampleData> poissonDiskSamples, AnimationCurve heightCurve, float heightMultiplier, GameObject vegetationPrefab) {
         this.heightMap = heightMap;
         this.moistureMap = moistureMap;
         this.biomeMap = biomeMap;
         this.poissonDiskSamples = poissonDiskSamples;
+        this.heightCurve = heightCurve;
+        this.heightMultiplier = heightMultiplier;
+        this.vegetationPrefab = vegetationPrefab;
+    }
+}
+
+public struct PoissonSampleData {
+    public readonly Vector2 position;
+    public readonly GameObject vegetationPrefab;
+
+    public PoissonSampleData(Vector2 position, GameObject vegetationPrefab) {
+        this.position = position;
+        this.vegetationPrefab = vegetationPrefab;
     }
 }

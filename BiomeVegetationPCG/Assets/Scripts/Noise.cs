@@ -7,7 +7,7 @@ public static class Noise
 {
     public enum NormalizeMode {Local, Global};
 
-    public static float [,] GenerateNoiseMap(int seed, int mapWidth, int mapHeight, float scale, int octaves, float persistance, float lacunarity, UnityEngine.Vector2 offset, NormalizeMode normalizeMode) {
+    public static float [,] GenerateNoiseMap(int seed, int mapWidth, int mapHeight, float scale, int octaves, float persistance, float lacunarity, Vector2 offset, NormalizeMode normalizeMode) {
 
         System.Random prng = new System.Random(seed);
 
@@ -86,13 +86,11 @@ public static class Noise
     }
 
 
-    public static List<Vector2> GeneratePoissonDiskSampling(int seed, int _mapWidth, int _mapHeight) {
+    public static List<Vector2> GeneratePoissonDiskSampling(int seed, int mapWidth, int mapHeight, int newPointsCount, float minDistance) {
 
-        int newPointsCount = 10;
-        float minDistance = 5;
-
-        float mapWidth = _mapWidth;
-        float mapHeight = _mapHeight;
+        if (minDistance <= 0) { // Empty list, no tree for this map
+            return new List<Vector2>();
+        }
 
         System.Random prng = new System.Random(seed);
 
@@ -138,6 +136,10 @@ public static class Noise
         }
 
         return samplePoints;
+    }
+
+    private static bool IsCorrectBiome(Vector2 newPoint, int width, Color[] biomeMap, Color currentBiome) {
+        return biomeMap[(int)newPoint.y * width + (int)newPoint.x].Equals(currentBiome);
     }
 
     private static bool IsInside(float mapWidth, float mapHeight, Vector2 newPoint) {
@@ -223,10 +225,6 @@ public class PoissonGrid {
 
         public void Add(Vector2 point) {
             content = point;
-        }
-
-        public bool HasPoint() {
-            return content != null;
         }
 
         public float Distance(Vector2 newPoint) {

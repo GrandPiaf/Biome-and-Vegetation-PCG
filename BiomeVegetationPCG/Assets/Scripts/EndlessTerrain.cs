@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -15,6 +16,7 @@ public class EndlessTerrain : MonoBehaviour{
     public Transform viewer;
 
     public Material mapMaterial;
+
 
     public static UnityEngine.Vector2 viewerPosition;
     UnityEngine.Vector2 viewerPositionOld;
@@ -73,6 +75,7 @@ public class EndlessTerrain : MonoBehaviour{
         UnityEngine.Vector2 position;
 
         GameObject meshObject;
+        GameObject vegetationContainer;
 
         Bounds bounds;
 
@@ -86,13 +89,16 @@ public class EndlessTerrain : MonoBehaviour{
         bool mapDataReceived;
         int previousLODIndex = -1;
 
-        public TerrainChunk(UnityEngine.Vector2 coord, int size, LODInfo[] detailLevels, Transform parent, Material material) {
+        // Vegetation gameobjects
+        List<GameObject> vegetations;
+
+        public TerrainChunk(Vector2 coord, int size, LODInfo[] detailLevels, Transform parent, Material material) {
 
             this.detailLevels = detailLevels;
 
             position = coord * size;
 
-            bounds = new Bounds(position, UnityEngine.Vector2.one * size);
+            bounds = new Bounds(position, Vector2.one * size);
 
             Vector3 positionV3 = new Vector3(position.x, 0, position.y);
 
@@ -106,6 +112,11 @@ public class EndlessTerrain : MonoBehaviour{
             meshObject.transform.parent = parent;
             meshObject.transform.localScale = Vector3.one * scale;
             SetVisible(false);
+
+
+            vegetationContainer = new GameObject("Vegetation Container");
+            vegetationContainer.transform.parent = meshObject.transform;
+
 
             lodMeshes = new LODMesh[detailLevels.Length];
             for (int i = 0; i < detailLevels.Length; i++) {
@@ -123,7 +134,26 @@ public class EndlessTerrain : MonoBehaviour{
             Texture2D texture = TextureGenerator.TextureFromColorMap(mapData.biomeMap, MapGenerator.mapChunkSize, MapGenerator.mapChunkSize);
             meshRenderer.material.mainTexture = texture;
 
+            this.vegetations = new List<GameObject>(mapData.poissonDiskSamples.Count);
+            CreateVegetation();
+
             UpdateTerrainChunk();
+        }
+
+        void CreateVegetation() {
+
+            int width = mapData.heightMap.GetLength(0);
+            int height = mapData.heightMap.GetLength(1);
+
+            float topLeftX = (width - 1) / -2f;
+            float topLeftZ = (height - 1) / 2f;
+
+            foreach (PoissonSampleData sample in mapData.poissonDiskSamples) {
+                float posX = topLeftX + sample.position.x;
+                float treeHeight = mapData.heightCurve.Evaluate(mapData.heightMap[(int)sample.position.x, (int)sample.position.y]) * mapData.heightMultiplier;
+                float posZ = topLeftZ - sample.position.y;
+                vegetations.Add(Instantiate(sample.vegetationPrefab, meshObject.transform.position + new Vector3(posX, treeHeight, posZ), Quaternion.identity, vegetationContainer.transform));
+            }
         }
 
         public void UpdateTerrainChunk() {
@@ -147,21 +177,31 @@ public class EndlessTerrain : MonoBehaviour{
                     }
                 }
 
+
                 if (lodIndex != previousLODIndex) {
+
                     LODMesh lodMesh = lodMeshes[lodIndex];
+
                     if (lodMesh.hasMesh) {
                         previousLODIndex = lodIndex;
                         meshFilter.mesh = lodMesh.mesh;
-                    } else if (!lodMesh.hasRequestedMesh) {
+                    }
+                    else if (!lodMesh.hasRequestedMesh) {
                         lodMesh.RequestMesh(mapData);
                     }
                 }
 
                 terrainChunksVisibleLastUpdate.Add(this);
 
+                SetVegetationVisible(detailLevels[lodIndex].vegetationsVisible);
+
             }
 
             SetVisible(visible);
+        }
+
+        public void SetVegetationVisible(bool vegetationsVisible) {
+            vegetationContainer.SetActive(vegetationsVisible);
         }
 
         public void SetVisible(bool visible) {
@@ -204,6 +244,7 @@ public class EndlessTerrain : MonoBehaviour{
     public struct LODInfo {
         public int lod;
         public float visibleDistanceThreshold;
+        public bool vegetationsVisible;
     }
 
 }
