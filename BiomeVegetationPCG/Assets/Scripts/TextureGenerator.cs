@@ -32,7 +32,7 @@ public static class TextureGenerator
         return TextureFromColorMap(colorMap, width, height);
     }
 
-    public static Texture2D TextureFromVegetationList(List<Vector2> poissonDiskSamples, int width, int height) {
+    public static Texture2D TextureFromVegetationList(List<PoissonSampleData> poissonDiskSamples, int width, int height) {
 
         Color[] colorMap = new Color[width * height];
 
@@ -44,8 +44,8 @@ public static class TextureGenerator
         }
 
         for (int i = 0; i < poissonDiskSamples.Count; i++) {
-            int y = (int)poissonDiskSamples[i].y;
-            int x = (int)poissonDiskSamples[i].x;
+            int y = (int)poissonDiskSamples[i].position.y;
+            int x = (int)poissonDiskSamples[i].position.x;
             colorMap[y * width + x] = Color.white;
         }
 
