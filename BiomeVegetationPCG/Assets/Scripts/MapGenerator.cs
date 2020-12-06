@@ -7,7 +7,7 @@ using UnityEngine;
 public class MapGenerator : MonoBehaviour
 {
     
-    public enum DrawMode { HeightMap, HeightColorMap, MoistureMap ,Mesh };
+    public enum DrawMode { HeightMap, MoistureMap, BiomeColorMap, Mesh };
     public DrawMode drawMode;
 
     public Noise.NormalizeMode normalizeMode;
@@ -55,14 +55,14 @@ public class MapGenerator : MonoBehaviour
         if (drawMode == DrawMode.HeightMap) {
             display.DrawTexture(TextureGenerator.TextureFromHeightMap(mapData.heightMap));
         }
-        else if (drawMode == DrawMode.HeightColorMap) {
-            display.DrawTexture(TextureGenerator.TextureFromColorMap(mapData.colorMap, mapChunkSize, mapChunkSize));
-        }
         else if (drawMode == DrawMode.MoistureMap) {
             display.DrawTexture(TextureGenerator.TextureFromHeightMap(mapData.moistureMap));
         }
+        else if (drawMode == DrawMode.BiomeColorMap) {
+            display.DrawTexture(TextureGenerator.TextureFromColorMap(mapData.biomeMap, mapChunkSize, mapChunkSize));
+        }
         else if (drawMode == DrawMode.Mesh) {
-            display.DrawMesh(MeshGenerator.GenerateTerrainMesh(mapData.heightMap, meshHeightMultiplier, meshHeightCurve, editorPreviewLOD), TextureGenerator.TextureFromColorMap(mapData.colorMap, mapChunkSize, mapChunkSize));
+            display.DrawMesh(MeshGenerator.GenerateTerrainMesh(mapData.heightMap, meshHeightMultiplier, meshHeightCurve, editorPreviewLOD), TextureGenerator.TextureFromColorMap(mapData.biomeMap, mapChunkSize, mapChunkSize));
         }
     }
 
@@ -114,27 +114,34 @@ public class MapGenerator : MonoBehaviour
 
         float[,] heightMap = Noise.GenerateNoiseMap(seedHeight, mapChunkSize, mapChunkSize, noiseScale, octaves, persistance, lacunarity, center + offset, normalizeMode);
 
-        Color[] colorMap = new Color[mapChunkSize * mapChunkSize];
+        float[,] moistureMap = Noise.GenerateNoiseMap(seedMoisture, mapChunkSize, mapChunkSize, noiseScale, octaves, persistance, lacunarity, center + offset, normalizeMode);
+
+        Color[] biomeMap = new Color[mapChunkSize * mapChunkSize];
+
+
+        // Getting colorMap for each 'pixel' in the texture
+        // Depending on heightMap and moistureMap
+        // Resulting in a biomeMap
 
         for (int y = 0; y < mapChunkSize; y++) {
             for (int x = 0; x < mapChunkSize; x++) {
                 
                 float currentHeight = heightMap[x, y];
+                float currentMoisture = moistureMap[x, y];
 
                 for (int i = 0; i < regions.Length; i++) {
-                    if (currentHeight >= regions[i].height) {
-                        colorMap[y * mapChunkSize + x] = regions[i].color;
-                    } else {
-                        break;
+                    if (currentHeight >= regions[i].height && currentMoisture >= regions[i].moisture) {
+                        biomeMap[y * mapChunkSize + x] = regions[i].color;
                     }
+                    //else if(currentHeight < regions[i].height && currentMoisture < regions[i].moisture) {
+                    //    break;
+                    //}
                 }
 
             }
         }
 
-        float[,] moistureMap = Noise.GenerateNoiseMap(seedMoisture, mapChunkSize, mapChunkSize, noiseScale, octaves, persistance, lacunarity, center + offset, normalizeMode);
-
-        return new MapData(heightMap, moistureMap, colorMap);
+        return new MapData(heightMap, moistureMap, biomeMap);
 
     }
 
@@ -164,6 +171,7 @@ public class MapGenerator : MonoBehaviour
 public struct TerrainType {
     public string name;
     public float height;
+    public float moisture;
     public Color color;
 }
 
@@ -171,11 +179,11 @@ public struct TerrainType {
 public struct MapData {
     public readonly float[,] heightMap;
     public readonly float[,] moistureMap;
-    public readonly Color[] colorMap;
+    public readonly Color[] biomeMap;
 
-    public MapData(float[,] heightMap, float[,] moistureMap, Color[] colorMap) {
+    public MapData(float[,] heightMap, float[,] moistureMap, Color[] biomeMap) {
         this.heightMap = heightMap;
         this.moistureMap = moistureMap;
-        this.colorMap = colorMap;
+        this.biomeMap = biomeMap;
     }
 }
