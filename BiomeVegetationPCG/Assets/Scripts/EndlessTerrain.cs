@@ -242,6 +242,7 @@ public class EndlessTerrain : MonoBehaviour{
 
     [System.Serializable]
     public struct LODInfo {
+        [Range(1, 6)]
         public int lod;
         public float visibleDistanceThreshold;
         public bool vegetationsVisible;

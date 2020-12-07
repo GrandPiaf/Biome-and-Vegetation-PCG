@@ -36,7 +36,6 @@ public class MapGenerator : MonoBehaviour
 
     public int seedVegetation;
     public int newPointsCount;
-    public GameObject vegetationPrefab;
 
 
     public Vector2 offset;
@@ -170,7 +169,7 @@ public class MapGenerator : MonoBehaviour
             }
         }
 
-        return new MapData(heightMap, moistureMap, biomeMap, poissonDiskSamples, meshHeightCurve, meshHeightMultiplier, vegetationPrefab) ;
+        return new MapData(heightMap, moistureMap, biomeMap, poissonDiskSamples, meshHeightCurve, meshHeightMultiplier);
 
     }
 
@@ -214,16 +213,14 @@ public struct MapData {
     public readonly List<PoissonSampleData> poissonDiskSamples;
     public readonly AnimationCurve heightCurve;
     public readonly float heightMultiplier;
-    public readonly GameObject vegetationPrefab;
 
-    public MapData(float[,] heightMap, float[,] moistureMap, Color[] biomeMap, List<PoissonSampleData> poissonDiskSamples, AnimationCurve heightCurve, float heightMultiplier, GameObject vegetationPrefab) {
+    public MapData(float[,] heightMap, float[,] moistureMap, Color[] biomeMap, List<PoissonSampleData> poissonDiskSamples, AnimationCurve heightCurve, float heightMultiplier) {
         this.heightMap = heightMap;
         this.moistureMap = moistureMap;
         this.biomeMap = biomeMap;
         this.poissonDiskSamples = poissonDiskSamples;
         this.heightCurve = heightCurve;
         this.heightMultiplier = heightMultiplier;
-        this.vegetationPrefab = vegetationPrefab;
     }
 }
 
